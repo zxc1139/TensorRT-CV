@@ -1,0 +1,50 @@
+name: "depth-anything-vits14"
+platform: "tensorrt_plan"
+max_batch_size: 8
+input [
+{
+  name: "input"
+  data_type: TYPE_FP32
+  dims: [3,518,518]
+}
+]
+output [
+{
+  name: "output"
+  data_type: TYPE_FP32
+  dims: [1,518,518]
+}
+]
+instance_group [
+{
+  count: 4
+  kind: KIND_GPU
+  gpus: [0,1]
+  }
+]
+
+dynamic_batching {
+
+}
+
+response_cache { 
+  enable: False
+}
+
+version_policy: { all: {}}
+
+model_warmup [
+  {  
+    name: "sample"
+    batch_size: 1
+    inputs {
+      key: "input"
+      value: {
+        data_type: TYPE_FP32
+        dims: [3,518,518]
+        random_data: true
+      }
+    }
+  }
+]
+

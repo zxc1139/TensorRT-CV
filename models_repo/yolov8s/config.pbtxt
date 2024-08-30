@@ -1,0 +1,52 @@
+name: "yolov8s"
+max_batch_size: 8
+platform: "tensorrt_plan"
+input [
+{
+  name: "images"
+  data_type: TYPE_FP32
+  dims: [3,640,640]
+}
+]
+output [
+{
+  name: "num_dets"
+  data_type: TYPE_INT32
+  dims: [1]
+},
+{
+  name: "bboxes"
+  data_type: TYPE_FP32
+  dims: [-1,4]
+},
+{
+  name: "scores"
+  data_type: TYPE_FP32
+  dims: [100]
+},
+{
+  name: "labels"
+  data_type: TYPE_INT32
+  dims: [100]
+}
+]
+instance_group [
+{
+  count: 4
+  kind: KIND_GPU
+  gpus: [0,1]
+  }
+]
+
+dynamic_batching {
+
+}
+
+version_policy: { all: {}}
+
+response_cache { 
+  enable: False
+}
+
+
+
