@@ -14,7 +14,6 @@ import logging
 import datetime
 from csv_logger import CsvLogger
 
-
 app = Flask(__name__, instance_relative_config=True)
 count = 0
 yolov8s_counter = 0
@@ -85,7 +84,6 @@ def _run_single_inference(model_wrapper, batched_images, scr_names, model_type, 
         results_dict['inference_result'] = out_img
         results_dict['raw_depth'] = raw_depth
         depth_results_queue.put(results_dict)
-
 
 def _run_batched_inference(model_wrapper, batched_images, scr_names, model_type, results_list):
     '''batched images inference'''
@@ -202,14 +200,6 @@ def initialize_depth():
                         frame_num_info = depth_results[i]['frame_num']
                         frame_time_info = depth_results[i]['frame_time']
                         csvlogger.info([model_info, video_info, frame_num_info, frame_time_info, infer_time, result_time])
-                    # csvlogger.info([depth_result_dict['model_type'],
-                    #                 depth_result_dict['video_source'],
-                    #                 depth_result_dict['frame_num'],
-                    #                 depth_result_dict['frame_time'],
-                    #                 infer_time,
-                    #                 result_time])
-
-               
             except AttributeError:
                 pass
 
@@ -220,7 +210,6 @@ def initialize_depth():
             break
         else:
             pass
-
 
 def initialize_yolov8s():
     print('Start initializing yolov8s')
@@ -293,7 +282,6 @@ def initialize_yolov8s():
                         frame_time_info = yolov8s_results[i]['frame_time']
                         csvlogger.info([model_info, video_info, frame_num_info, frame_time_info, infer_time, result_time])
           
-                
             except AttributeError:
                 pass
 
@@ -388,125 +376,6 @@ def initialize_yolov8n():
         else:
             pass
 
-
-def initialize_model():
-    print('Start initializing yolo')
-    # Yolov8s wrapper
-    yolov8s_wrapper = YoloTritonInference(triton_client=triton_client,
-                                          model_name='yolov8s',
-                                          model_version='1', 
-                                          image_path=None,
-                                          mode=MODE)
-    
-    yolov8n_wrapper = YoloTritonInference(triton_client=triton_client,
-                                          model_name='yolov8n',
-                                          model_version='1', 
-                                          image_path=None,
-                                          mode=MODE)
-    
-    depth_wrapper = DepthTritonInference(triton_client=triton_client, 
-                                         model_name='depth-anything-vits14', 
-                                         model_version='1',
-                                         image_path=None,
-                                         mode=MODE)
-    
-
-    while True:
-        if len(active_streams_dictionary) > 0:
-            try:
-                batched_images_yolov8s = []
-                batched_images_yolov8n = []
-                batched_images_depth = []
-                scr_names = []
-
-                yolov8s_results = []
-                yolov8n_results = []
-                depth_results = []
-                for k, v in list(active_streams_dictionary.items()):
-                    video_scr = k
-                    video_stream_widget = v
-                    model_type = video_stream_widget.get_model()
-                    frame_num, frame = video_stream_widget.get_frame()  
-                
-                    if isinstance(video_scr, int): # src should be an integer is video source is camera
-                        scr_name = str(video_scr)
-                    else:
-                        scr_name = video_scr[-5:]
-
-                    win_name = 'raw_frame_' + scr_name
-                    file_name = win_name + '.jpg'
-                    frame = cv2.resize(frame, (480, 300))
-                    cv2.imshow(win_name, frame)
-                    scr_names.append(scr_name)
-
-                    
-                    if 'yolov8s' in model_type:
-                        yolov8s_result_dict = {}
-                        batched_images_yolov8s.append(frame.copy())
-                        yolov8s_result_dict['model_type'] = 'yolov8s'
-                        yolov8s_result_dict['video_source'] = scr_name
-                        yolov8s_result_dict['frame_num'] = frame_num
-                        yolov8s_result_dict['raw_frame'] = frame.copy()
-                        yolov8s_results.append(yolov8s_result_dict)
-                        
-
-                    if 'yolov8n' in model_type:
-                        yolov8n_result_dict = {}
-                        batched_images_yolov8n.append(frame.copy())   
-                        yolov8n_result_dict['model_type'] = 'yolov8n'     
-                        yolov8n_result_dict['video_source'] = scr_name
-                        yolov8n_result_dict['frame_num'] = frame_num
-                        yolov8n_result_dict['raw_frame'] = frame.copy()
-                        yolov8n_results.append(yolov8n_result_dict)
-                        
-                    if 'depth' in model_type:
-                        depth_result_dict = {}
-                        batched_images_depth.append(frame.copy())
-                        depth_result_dict['model_type'] = 'depth-vits14'
-                        depth_result_dict['video_source'] = scr_name
-                        depth_result_dict['frame_num'] = frame_num
-                        depth_result_dict['raw_frame'] = frame.copy()
-                        depth_results.append(depth_result_dict)
-
-                print(len(batched_images_yolov8s), len(batched_images_yolov8n), len(batched_images_depth))
-                print(len(yolov8s_results), len(yolov8n_results), len(depth_results))
-                
-                # run yolov8s inference
-                if len(batched_images_yolov8s) == 1:
-                    _run_single_inference(yolov8s_wrapper, batched_images_yolov8s, scr_names, 'yolov8s', yolov8s_results)
-                  
-                elif len(batched_images_yolov8s) > 1:
-                    _run_batched_inference(yolov8s_wrapper, batched_images_yolov8s, scr_names, 'yolov8s', yolov8s_results)
-
-                # run yolov8n inference
-                if len(batched_images_yolov8n) == 1:
-                    _run_single_inference(yolov8n_wrapper, batched_images_yolov8n, scr_names, 'yolov8n', yolov8n_results)
-
-                elif len(batched_images_yolov8n) > 1:
-                    _run_batched_inference(yolov8n_wrapper, batched_images_yolov8n, scr_names, 'yolov8n', yolov8n_results)
-
-                # run depth_anything inference
-                if len(batched_images_depth) == 1:
-                   _run_single_inference(depth_wrapper, batched_images_depth, scr_names, 'depth', depth_results)
-
-
-                elif len(batched_images_depth) > 1:
-                    _run_batched_inference(depth_wrapper, batched_images_depth, scr_names, 'depth', depth_results)
-
-                
-               
-            except AttributeError:
-                pass
-
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            print('End running all models')
-            cv2.destroyAllWindows()
-            break
-        else:
-            pass
-
-
 @app.route('/start_stream', methods=['POST'])
 def start_stream():
     global count
@@ -597,7 +466,6 @@ def remove_stream():
         return {"Bad request": "Stream does not exist"}, 400
     
 
-
 @app.route('/update_model', methods=['PATCH'])
 def update_model():
     rtsp_url = request.form['rtsp_url']
@@ -632,7 +500,6 @@ def update_model():
     return {"Model updated": model_type_update}, 200
 
     
-    
 def run_flask_app():
     app.run(debug=False)
 
@@ -662,7 +529,6 @@ def get_depth_outputs():
         print("Depth test: ", 
             frame_num, 
             frame_time)
-
 
 
 if __name__ == '__main__':
